@@ -1,10 +1,89 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>BTC1 Tools</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTC1 Tools – Zpub/Xpub Address Viewer</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      color: #b6ff53;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      background-color: #b6ff53;
+      border: none;
+      color: #121212;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    pre {
+      background: #1b1b1b;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+  </style>
 </head>
 <body>
-  <h1>Welcome to BTC1 Tools</h1>
-  <p>This is a test page to confirm GitHub Pages works.</p>
+  <h1>Bitcoin Address Viewer</h1>
+  <p>Paste your <strong>xpub / ypub / zpub</strong> key below:</p>
+  <input type="text" id="xpub" placeholder="Enter your extended public key here...">
+  <button onclick="generate()">Generate Native SegWit (bc1...) Addresses</button>
+  <pre id="result"></pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/bitcoinjs-lib@6.1.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bip32@2.0.6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bs58check@2.1.2"></script>
+  <script>
+    function generate() {
+      const input = document.getElementById('xpub').value.trim();
+      const result = document.getElementById('result');
+      result.textContent = '';
+      try {
+        let prefix = input.slice(0, 4);
+        let converted = input;
+
+        // Convert zpub/ypub to xpub
+        const versions = {
+          zpub: '0488b21e', // xpub
+          ypub: '0488b21e',
+          xpub: '0488b21e'
+        };
+
+        if (prefix !== 'xpub') {
+          const data = bs58check.decode(input);
+          data.writeUInt32BE(parseInt(versions[prefix], 16), 0);
+          converted = bs58check.encode(data);
+        }
+
+        const node = bip32.fromBase58(converted);
+        let output = '';
+        for (let i = 0; i < 10; i++) {
+          const child = node.derive(0).derive(i);
+          const { address } = bitcoin.payments.p2wpkh({ pubkey: child.publicKey });
+          output += `#${i}: ${address}\n`;
+        }
+        result.textContent = output;
+      } catch (e) {
+        result.textContent = '⚠️ Error: ' + e.message;
+      }
+    }
+  </script>
 </body>
 </html>
